@@ -120,8 +120,8 @@ nbocr recognize <IMAGE> [OPTIONS]
 # Basic recognition
 nbocr r image.png -m ./models
 
-# Chinese text with high precision
-nbocr r document.jpg -m ./models -l chinese --precision high
+# Chinese text recognition
+nbocr r document.jpg -m ./models -l chinese
 
 # English text with GPU acceleration (macOS)
 nbocr r page.png -m ./models -l english --gpu metal
@@ -145,7 +145,7 @@ nbocr batch <DIRECTORY> [OPTIONS]
 - `-f, --format <FORMAT>`: Output format (text, json, jsonl)
 - `-o, --output <FILE>`: Output file (default: stdout)
 - `--recursive`: Process subdirectories recursively
-- `--precision <PRECISION>`: Engine precision mode (fast, balanced, high)
+- `--precision <PRECISION>`: Engine precision mode (fast)
 - `-t, --threads <THREADS>`: Number of threads (default: 4)
 - `--loader-threads <N>`: Number of image loader threads (default: auto)
 - `--gpu <GPU>`: GPU backend to use
@@ -231,13 +231,11 @@ nbocr info korean
 
 ## 🎯 Precision Modes
 
-The tool supports three precision modes to balance speed and accuracy:
+The tool uses fast mode optimized for speed:
 
 | Mode | Speed | Accuracy | Use Case |
 |------|-------|----------|----------|
-| **fast** | ⚡⚡⚡ | ⭐⭐ | Real-time processing, low-quality images acceptable |
-| **balanced** | ⚡⚡ | ⭐⭐⭐ | General purpose (default) |
-| **high** | ⚡ | ⭐⭐⭐⭐ | High-quality documents, maximum accuracy needed |
+| **fast** | ⚡⚡⚡ | ⭐⭐⭐ | General purpose (default) |
 
 ## 🔧 Pipeline Architecture
 

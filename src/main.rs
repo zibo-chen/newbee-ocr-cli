@@ -126,7 +126,7 @@ enum Commands {
         recursive: bool,
 
         /// Engine precision mode
-        #[arg(long, default_value = "balanced", value_enum)]
+        #[arg(long, default_value = "fast", value_enum)]
         precision: PrecisionModeArg,
 
         /// Number of threads per engine
@@ -181,20 +181,14 @@ enum OutputFormat {
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
 enum PrecisionModeArg {
-    /// Fast mode - lower precision, faster speed
+    /// Fast mode - optimized for speed
     Fast,
-    /// Balanced mode - balance between speed and accuracy
-    Balanced,
-    /// High precision mode - highest accuracy
-    High,
 }
 
 impl PrecisionModeArg {
     fn to_engine_config(&self) -> OcrEngineConfig {
         match self {
             PrecisionModeArg::Fast => OcrEngineConfig::fast(),
-            PrecisionModeArg::Balanced => OcrEngineConfig::default(), // 使用默认配置而不是 balanced，避免 multi_scales 问题
-            PrecisionModeArg::High => OcrEngineConfig::high_precision(),
         }
     }
 }
