@@ -10,7 +10,7 @@ homepage = "https://github.com/zibo-chen/newbee-ocr-cli"
 keywords = ["ocr", "cli", "paddleocr", "text-recognition"]
 
 [features]
-default = ["metal", "embed-det-v5-fp16"]
+default = ["metal", "embed-det-v5-fp16", "embed-rec-english"]
 
 # 检测模型内嵌
 embed-det-v5 = []
@@ -38,7 +38,7 @@ vulkan = ["ocr-rs/vulkan"]
 cuda = ["ocr-rs/cuda"]
 
 [dependencies]
-ocr-rs = { path = "../" }
+ocr-rs = { version = "2.0.0" }
 clap = { version = "4", features = ["derive", "color"] }
 image = "0.25"
 rayon = "1.8"

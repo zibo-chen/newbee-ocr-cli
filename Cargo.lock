@@ -1092,6 +1092,8 @@ checksum = "830b246a0e5f20af87141b25c173cd1b609bd7779a4617d6ec582abaf90870f3"
 [[package]]
 name = "ocr-rs"
 version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e579cb26477c798833087d0bb980092aa25b30391c9765b90a874a17f74a9e1d"
 dependencies = [
  "bindgen",
  "cc",
