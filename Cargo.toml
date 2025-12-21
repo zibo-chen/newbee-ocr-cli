@@ -1,6 +1,6 @@
 [package]
 name = "newbee_ocr_cli"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 description = "A powerful and easy-to-use CLI tool for OCR based on ocr-rs"
 authors = ["ChenZibo <qw.54@163.com>"]
