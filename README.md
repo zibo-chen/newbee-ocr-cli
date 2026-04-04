@@ -22,7 +22,7 @@ A powerful and easy-to-use command-line OCR tool based on [rust-paddle-ocr](http
 
 ```bash
 # Clone the repository
-git clone https://github.com/zibo-chen/rust-paddle-ocr.git
+git clone https://github.com/zibo-chen/newbee-ocr-cli
 cd rust-paddle-ocr/newbee_ocr_cli
 
 # Build the project
