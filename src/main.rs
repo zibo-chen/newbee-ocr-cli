@@ -25,7 +25,8 @@ use ocr_rs::{Backend, OcrEngine, OcrEngineConfig};
 use serde::{Deserialize, Serialize};
 
 use crate::models::{
-    print_models_table, DetectionModel, EmbeddedModels, ModelResolver, RecognitionModel,
+    is_language_supported_by_detection_model, print_models_table, unsupported_language_message,
+    DetectionModel, EmbeddedModels, ModelResolver, RecognitionModel,
 };
 use crate::pipeline::{OcrPipeline, PipelineConfig, PipelineStats};
 
@@ -57,7 +58,7 @@ enum Commands {
         #[arg(short = 'l', long, default_value = "chinese")]
         language: String,
 
-        /// Detection model version
+        /// Detection/full OCR model version. PP-OCRv6 tiers select matching v6 recognition.
         #[arg(short = 'd', long, default_value = "v5")]
         det_model: String,
 
@@ -74,7 +75,7 @@ enum Commands {
         output: Option<PathBuf>,
 
         /// Engine precision mode
-        #[arg(long, default_value = "balanced", value_enum)]
+        #[arg(long, default_value = "fast", value_enum)]
         precision: PrecisionModeArg,
 
         /// Number of threads
@@ -105,7 +106,7 @@ enum Commands {
         #[arg(short = 'l', long, default_value = "chinese")]
         language: String,
 
-        /// Detection model version
+        /// Detection/full OCR model version. PP-OCRv6 tiers select matching v6 recognition.
         #[arg(short = 'd', long, default_value = "v5")]
         det_model: String,
 
@@ -331,18 +332,29 @@ fn create_engine(
         config.backend = gpu_backend.to_backend();
     }
 
+    let effective_rec_model = det_model.paired_recognition_model().unwrap_or(rec_model);
+
+    if verbose && effective_rec_model != rec_model {
+        println!(
+            "{} Detection model {} selects matching recognition model {}",
+            "ℹ".blue(),
+            det_model,
+            effective_rec_model
+        );
+    }
+
     // 首先尝试使用内嵌模型
     if let (Some(det_bytes), Some(rec_bytes), Some(charset_bytes)) = (
         EmbeddedModels::get_det_model(det_model),
-        EmbeddedModels::get_rec_model(rec_model),
-        EmbeddedModels::get_charset(rec_model),
+        EmbeddedModels::get_rec_model(effective_rec_model),
+        EmbeddedModels::get_charset(effective_rec_model),
     ) {
         if verbose {
             println!(
                 "{} Using embedded models for {} detection and {} recognition",
                 "ℹ".blue(),
                 det_model,
-                rec_model
+                effective_rec_model
             );
         }
 
@@ -367,22 +379,22 @@ fn create_engine(
         })?;
 
     let rec_path = resolver
-        .resolve_rec_model(rec_model)
-        .or_else(|| models_dir.map(|d| d.join(rec_model.model_filename())))
+        .resolve_rec_model(effective_rec_model)
+        .or_else(|| models_dir.map(|d| d.join(effective_rec_model.model_filename())))
         .ok_or_else(|| {
             anyhow::anyhow!(
                 "Recognition model not found: {}. Please specify --models-dir or use embedded models.",
-                rec_model.model_filename()
+                effective_rec_model.model_filename()
             )
         })?;
 
     let charset_path = resolver
-        .resolve_charset(rec_model)
-        .or_else(|| models_dir.map(|d| d.join(rec_model.charset_filename())))
+        .resolve_charset(effective_rec_model)
+        .or_else(|| models_dir.map(|d| d.join(effective_rec_model.charset_filename())))
         .ok_or_else(|| {
             anyhow::anyhow!(
                 "Charset file not found: {}. Please specify --models-dir.",
-                rec_model.charset_filename()
+                effective_rec_model.charset_filename()
             )
         })?;
 
@@ -424,6 +436,10 @@ fn cmd_recognize(
 
     let det_model = DetectionModel::from_str(det_model_str)
         .ok_or_else(|| anyhow::anyhow!("Unknown detection model: {}", det_model_str))?;
+
+    if !is_language_supported_by_detection_model(language, det_model) {
+        anyhow::bail!(unsupported_language_message(language, det_model));
+    }
 
     // 检查输入文件
     if !input.exists() {
@@ -535,6 +551,10 @@ fn cmd_batch(
 
     let det_model = DetectionModel::from_str(det_model_str)
         .ok_or_else(|| anyhow::anyhow!("Unknown detection model: {}", det_model_str))?;
+
+    if !is_language_supported_by_detection_model(language, det_model) {
+        anyhow::bail!(unsupported_language_message(language, det_model));
+    }
 
     // 检查输入目录
     if !input.is_dir() {
@@ -885,6 +905,15 @@ fn cmd_info(model_name: &str) -> Result<()> {
                 "PP-OCRv5 FP16 detection model - Faster inference, lower memory"
             }
             DetectionModel::V4 => "PP-OCRv4 detection model - Legacy version, good compatibility",
+            DetectionModel::V6Tiny => {
+                "PP-OCRv6 tiny detection model - selects the matching unified multilingual v6 tiny recognition model"
+            }
+            DetectionModel::V6Small => {
+                "PP-OCRv6 small detection model - selects the matching unified multilingual v6 small recognition model"
+            }
+            DetectionModel::V6Medium => {
+                "PP-OCRv6 medium detection model - selects the matching unified multilingual v6 medium recognition model"
+            }
         };
         println!("  {} {}", "Description:".bright_cyan(), desc);
         println!();

@@ -1,6 +1,6 @@
 [package]
 name = "newbee_ocr_cli"
-version = "0.1.3"
+version = "0.2.0"
 edition = "2021"
 description = "A powerful and easy-to-use CLI tool for OCR based on ocr-rs"
 authors = ["ChenZibo <qw.54@163.com>"]
@@ -16,6 +16,9 @@ default = ["metal", "embed-det-v5-fp16", "embed-rec-english"]
 embed-det-v5 = []
 embed-det-v5-fp16 = []
 embed-det-v4 = []
+embed-det-v6-tiny = []
+embed-det-v6-small = []
+embed-det-v6-medium = []
 
 # 识别模型内嵌
 embed-rec-chinese = []    # PP-OCRv5 中文模型
@@ -30,6 +33,9 @@ embed-rec-arabic = []     # Arabic, Persian, Uyghur, Urdu, etc.
 embed-rec-devanagari = [] # Hindi, Marathi, Nepali, Sanskrit, etc.
 embed-rec-tamil = []      # Tamil, English
 embed-rec-telugu = []     # Telugu, English
+embed-rec-v6-tiny = []    # PP-OCRv6 tiny unified multilingual model
+embed-rec-v6-small = []   # PP-OCRv6 small unified multilingual model
+embed-rec-v6-medium = []  # PP-OCRv6 medium unified multilingual model
 
 # GPU 后端支持
 metal = ["ocr-rs/metal"]

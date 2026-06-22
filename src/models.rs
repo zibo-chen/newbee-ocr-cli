@@ -5,6 +5,179 @@
 use std::fmt;
 use std::path::Path;
 
+const PP_OCRV6_SUPPORTED_LANGUAGES: &[&str] = &[
+    "Chinese (Simplified)",
+    "Chinese (Traditional)",
+    "English",
+    "Japanese",
+    "Afrikaans",
+    "Azerbaijani",
+    "Bosnian",
+    "Catalan",
+    "Czech",
+    "Welsh",
+    "Danish",
+    "German",
+    "Spanish",
+    "Estonian",
+    "Basque",
+    "Finnish",
+    "French",
+    "Irish",
+    "Galician",
+    "Croatian",
+    "Hungarian",
+    "Indonesian",
+    "Icelandic",
+    "Italian",
+    "Kurdish",
+    "Latin",
+    "Luxembourgish",
+    "Lithuanian",
+    "Latvian",
+    "Maori",
+    "Malay",
+    "Maltese",
+    "Dutch",
+    "Norwegian",
+    "Occitan",
+    "Polish",
+    "Portuguese",
+    "Quechua",
+    "Romansh",
+    "Romanian",
+    "Serbian (Latin)",
+    "Slovak",
+    "Slovenian",
+    "Albanian",
+    "Swedish",
+    "Swahili",
+    "Tagalog",
+    "Turkish",
+    "Uzbek",
+    "Vietnamese",
+];
+
+const PP_OCRV6_LANGUAGE_ALIASES: &[&str] = &[
+    "ch",
+    "zh",
+    "cn",
+    "chinese",
+    "chinese_simplified",
+    "simplified_chinese",
+    "chinese_cht",
+    "cht",
+    "traditional_chinese",
+    "chinese_traditional",
+    "en",
+    "english",
+    "japan",
+    "japanese",
+    "ja",
+    "jp",
+    "af",
+    "afrikaans",
+    "az",
+    "azerbaijani",
+    "bs",
+    "bosnian",
+    "ca",
+    "catalan",
+    "cs",
+    "czech",
+    "cy",
+    "welsh",
+    "da",
+    "danish",
+    "de",
+    "german",
+    "es",
+    "spanish",
+    "et",
+    "estonian",
+    "eu",
+    "basque",
+    "fi",
+    "finnish",
+    "fr",
+    "french",
+    "ga",
+    "irish",
+    "gl",
+    "galician",
+    "hr",
+    "croatian",
+    "hu",
+    "hungarian",
+    "id",
+    "indonesian",
+    "is",
+    "icelandic",
+    "it",
+    "italian",
+    "ku",
+    "kurdish",
+    "la",
+    "latin",
+    "lb",
+    "luxembourgish",
+    "lt",
+    "lithuanian",
+    "lv",
+    "latvian",
+    "mi",
+    "maori",
+    "ms",
+    "malay",
+    "mt",
+    "maltese",
+    "nl",
+    "dutch",
+    "no",
+    "norwegian",
+    "oc",
+    "occitan",
+    "pl",
+    "polish",
+    "pt",
+    "portuguese",
+    "qu",
+    "quechua",
+    "rm",
+    "romansh",
+    "ro",
+    "romanian",
+    "rs_latin",
+    "serbian_latin",
+    "sr_latn",
+    "sk",
+    "slovak",
+    "sl",
+    "slovenian",
+    "sq",
+    "albanian",
+    "sv",
+    "swedish",
+    "sw",
+    "swahili",
+    "tl",
+    "tagalog",
+    "tr",
+    "turkish",
+    "uz",
+    "uzbek",
+    "vi",
+    "vietnamese",
+];
+
+fn normalize_model_key(s: &str) -> String {
+    s.trim()
+        .to_lowercase()
+        .replace([' ', '-'], "_")
+        .replace("pp_ocr", "ppocr")
+        .replace("ppocr_", "ppocr")
+}
+
 /// 支持的语言/模型类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum RecognitionModel {
@@ -32,6 +205,12 @@ pub enum RecognitionModel {
     Tamil,
     /// 泰卢固语 (Telugu, English)
     Telugu,
+    /// PP-OCRv6 tiny 统一多语言识别模型
+    V6Tiny,
+    /// PP-OCRv6 small 统一多语言识别模型
+    V6Small,
+    /// PP-OCRv6 medium 统一多语言识别模型
+    V6Medium,
 }
 
 impl RecognitionModel {
@@ -50,6 +229,9 @@ impl RecognitionModel {
             RecognitionModel::Devanagari => "devanagari",
             RecognitionModel::Tamil => "tamil",
             RecognitionModel::Telugu => "telugu",
+            RecognitionModel::V6Tiny => "v6-tiny",
+            RecognitionModel::V6Small => "v6-small",
+            RecognitionModel::V6Medium => "v6-medium",
         }
     }
 
@@ -68,6 +250,9 @@ impl RecognitionModel {
             RecognitionModel::Devanagari => "devanagari_PP-OCRv5_mobile_rec_infer.mnn",
             RecognitionModel::Tamil => "ta_PP-OCRv5_mobile_rec_infer.mnn",
             RecognitionModel::Telugu => "te_PP-OCRv5_mobile_rec_infer.mnn",
+            RecognitionModel::V6Tiny => "PP-OCRv6_tiny_rec.mnn",
+            RecognitionModel::V6Small => "PP-OCRv6_small_rec.mnn",
+            RecognitionModel::V6Medium => "PP-OCRv6_medium_rec.mnn",
         }
     }
 
@@ -86,15 +271,21 @@ impl RecognitionModel {
             RecognitionModel::Devanagari => "ppocr_keys_devanagari.txt",
             RecognitionModel::Tamil => "ppocr_keys_ta.txt",
             RecognitionModel::Telugu => "ppocr_keys_te.txt",
+            RecognitionModel::V6Tiny => "ppocr_keys_v6_tiny.txt",
+            RecognitionModel::V6Small => "ppocr_keys_v6_small.txt",
+            RecognitionModel::V6Medium => "ppocr_keys_v6_medium.txt",
         }
     }
 
     /// 获取支持的语言列表
     pub fn supported_languages(&self) -> &'static [&'static str] {
         match self {
-            RecognitionModel::Chinese => {
-                &["Chinese (Simplified)", "Chinese (Traditional)", "English"]
-            }
+            RecognitionModel::Chinese => &[
+                "Chinese (Simplified)",
+                "Chinese (Traditional)",
+                "English",
+                "Japanese",
+            ],
             RecognitionModel::Korean => &["Korean", "English"],
             RecognitionModel::Latin => &[
                 "French",
@@ -195,22 +386,55 @@ impl RecognitionModel {
             ],
             RecognitionModel::Tamil => &["Tamil", "English"],
             RecognitionModel::Telugu => &["Telugu", "English"],
+            RecognitionModel::V6Tiny | RecognitionModel::V6Small | RecognitionModel::V6Medium => {
+                PP_OCRV6_SUPPORTED_LANGUAGES
+            }
         }
     }
 
     /// 从字符串解析模型类型
     pub fn from_str(s: &str) -> Option<Self> {
-        match s.to_lowercase().as_str() {
-            "chinese" | "ch" | "cn" | "zh" => Some(RecognitionModel::Chinese),
+        match normalize_model_key(s).as_str() {
+            "v6" | "ppocrv6" | "v6_tiny" | "ppocrv6_tiny" => Some(RecognitionModel::V6Tiny),
+            "v6_small" | "ppocrv6_small" => Some(RecognitionModel::V6Small),
+            "v6_medium" | "ppocrv6_medium" => Some(RecognitionModel::V6Medium),
+            "chinese" | "ch" | "cn" | "zh" | "ja" | "jp" | "japanese" => {
+                Some(RecognitionModel::Chinese)
+            }
             "korean" | "ko" | "kr" => Some(RecognitionModel::Korean),
-            "latin" | "la" => Some(RecognitionModel::Latin),
-            "eslav" | "eastslav" | "east-slavic" => Some(RecognitionModel::EastSlavic),
+            "latin" | "la" | "french" | "fr" | "german" | "de" | "afrikaans" | "af" | "italian"
+            | "it" | "spanish" | "es" | "bosnian" | "bs" | "portuguese" | "pt" | "czech" | "cs"
+            | "welsh" | "cy" | "danish" | "da" | "estonian" | "et" | "irish" | "ga"
+            | "croatian" | "hr" | "uzbek" | "uz" | "hungarian" | "hu" | "serbian_latin"
+            | "sr_latn" | "indonesian" | "id" | "occitan" | "oc" | "icelandic" | "is"
+            | "lithuanian" | "lt" | "maori" | "mi" | "malay" | "ms" | "dutch" | "nl"
+            | "norwegian" | "no" | "polish" | "pl" | "slovak" | "sk" | "slovenian" | "sl"
+            | "albanian" | "sq" | "swedish" | "sv" | "swahili" | "sw" | "tagalog" | "tl"
+            | "turkish" | "tr" | "azerbaijani" | "az" | "kurdish" | "ku" | "latvian" | "lv"
+            | "maltese" | "mt" | "pali" | "pi" | "romanian" | "ro" | "vietnamese" | "vi"
+            | "finnish" | "fi" | "basque" | "eu" | "galician" | "gl" | "luxembourgish" | "lb"
+            | "romansh" | "rm" | "catalan" | "ca" | "quechua" | "qu" => {
+                Some(RecognitionModel::Latin)
+            }
+            "eslav" | "eastslav" | "east_slavic" | "russian" | "ru" | "belarusian" | "be"
+            | "ukrainian" | "uk" => Some(RecognitionModel::EastSlavic),
             "thai" | "th" => Some(RecognitionModel::Thai),
             "greek" | "el" => Some(RecognitionModel::Greek),
             "english" | "en" => Some(RecognitionModel::English),
-            "cyrillic" | "cy" => Some(RecognitionModel::Cyrillic),
-            "arabic" | "ar" => Some(RecognitionModel::Arabic),
-            "devanagari" | "deva" | "hi" | "hindi" => Some(RecognitionModel::Devanagari),
+            "cyrillic" | "serbian_cyrillic" | "sr_cyrl" | "bulgarian" | "bg" | "mongolian"
+            | "mn" | "abkhazian" | "ab" | "adyghe" | "ady" | "kabardian" | "kbd" | "avar"
+            | "av" | "dargin" | "dar" | "ingush" | "inh" | "chechen" | "ce" | "lak" | "lezgin"
+            | "lez" | "tabasaran" | "tab" | "kazakh" | "kk" | "kyrgyz" | "ky" | "tajik" | "tg"
+            | "macedonian" | "mk" | "tatar" | "tt" | "chuvash" | "cv" | "bashkir" | "ba"
+            | "malian" | "mari" | "moldovan" | "mo" | "udmurt" | "udm" | "komi" | "kv"
+            | "ossetian" | "os" | "buryat" | "bua" | "kalmyk" | "xal" | "tuvan" | "tyv"
+            | "sakha" | "sah" | "karakalpak" | "kaa" => Some(RecognitionModel::Cyrillic),
+            "arabic" | "ar" | "persian" | "fa" | "uyghur" | "ug" | "urdu" | "ur" | "pashto"
+            | "ps" | "sindhi" | "sd" | "balochi" | "bal" => Some(RecognitionModel::Arabic),
+            "devanagari" | "deva" | "hindi" | "hi" | "marathi" | "mr" | "nepali" | "ne"
+            | "bihari" | "bh" | "maithili" | "mai" | "angika" | "anp" | "bhojpuri" | "bho"
+            | "magahi" | "mag" | "santali" | "sat" | "newari" | "new" | "konkani" | "kok"
+            | "sanskrit" | "sa" | "haryanvi" | "bgc" => Some(RecognitionModel::Devanagari),
             "tamil" | "ta" => Some(RecognitionModel::Tamil),
             "telugu" | "te" => Some(RecognitionModel::Telugu),
             _ => None,
@@ -232,6 +456,9 @@ impl RecognitionModel {
             RecognitionModel::Devanagari,
             RecognitionModel::Tamil,
             RecognitionModel::Telugu,
+            RecognitionModel::V6Tiny,
+            RecognitionModel::V6Small,
+            RecognitionModel::V6Medium,
         ]
     }
 }
@@ -252,6 +479,12 @@ pub enum DetectionModel {
     V5Fp16,
     /// PP-OCRv4 检测模型
     V4,
+    /// PP-OCRv6 tiny 检测模型
+    V6Tiny,
+    /// PP-OCRv6 small 检测模型
+    V6Small,
+    /// PP-OCRv6 medium 检测模型
+    V6Medium,
 }
 
 impl DetectionModel {
@@ -261,6 +494,9 @@ impl DetectionModel {
             DetectionModel::V5 => "v5",
             DetectionModel::V5Fp16 => "v5-fp16",
             DetectionModel::V4 => "v4",
+            DetectionModel::V6Tiny => "v6-tiny",
+            DetectionModel::V6Small => "v6-small",
+            DetectionModel::V6Medium => "v6-medium",
         }
     }
 
@@ -270,15 +506,31 @@ impl DetectionModel {
             DetectionModel::V5 => "PP-OCRv5_mobile_det.mnn",
             DetectionModel::V5Fp16 => "PP-OCRv5_mobile_det_fp16.mnn",
             DetectionModel::V4 => "ch_PP-OCRv4_det_infer.mnn",
+            DetectionModel::V6Tiny => "PP-OCRv6_tiny_det.mnn",
+            DetectionModel::V6Small => "PP-OCRv6_small_det.mnn",
+            DetectionModel::V6Medium => "PP-OCRv6_medium_det.mnn",
+        }
+    }
+
+    /// 获取同档 v6 识别模型；v4/v5 保持由 language 参数决定。
+    pub fn paired_recognition_model(&self) -> Option<RecognitionModel> {
+        match self {
+            DetectionModel::V6Tiny => Some(RecognitionModel::V6Tiny),
+            DetectionModel::V6Small => Some(RecognitionModel::V6Small),
+            DetectionModel::V6Medium => Some(RecognitionModel::V6Medium),
+            DetectionModel::V5 | DetectionModel::V5Fp16 | DetectionModel::V4 => None,
         }
     }
 
     /// 从字符串解析
     pub fn from_str(s: &str) -> Option<Self> {
-        match s.to_lowercase().as_str() {
-            "v5" | "ppocr-v5" => Some(DetectionModel::V5),
-            "v5-fp16" | "v5fp16" | "ppocr-v5-fp16" => Some(DetectionModel::V5Fp16),
-            "v4" | "ppocr-v4" => Some(DetectionModel::V4),
+        match normalize_model_key(s).as_str() {
+            "v5" | "ppocrv5" => Some(DetectionModel::V5),
+            "v5_fp16" | "v5fp16" | "ppocrv5_fp16" => Some(DetectionModel::V5Fp16),
+            "v4" | "ppocrv4" => Some(DetectionModel::V4),
+            "v6" | "ppocrv6" | "v6_tiny" | "ppocrv6_tiny" => Some(DetectionModel::V6Tiny),
+            "v6_small" | "ppocrv6_small" => Some(DetectionModel::V6Small),
+            "v6_medium" | "ppocrv6_medium" => Some(DetectionModel::V6Medium),
             _ => None,
         }
     }
@@ -289,6 +541,9 @@ impl DetectionModel {
             DetectionModel::V5,
             DetectionModel::V5Fp16,
             DetectionModel::V4,
+            DetectionModel::V6Tiny,
+            DetectionModel::V6Small,
+            DetectionModel::V6Medium,
         ]
     }
 }
@@ -296,6 +551,46 @@ impl DetectionModel {
 impl fmt::Display for DetectionModel {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+
+fn is_ppocrv6_language_alias(language: &str) -> bool {
+    let key = normalize_model_key(language);
+    PP_OCRV6_LANGUAGE_ALIASES.contains(&key.as_str())
+}
+
+fn is_ppocrv6_japanese_alias(language: &str) -> bool {
+    matches!(
+        normalize_model_key(language).as_str(),
+        "japan" | "japanese" | "ja" | "jp"
+    )
+}
+
+pub fn is_language_supported_by_detection_model(language: &str, det_model: DetectionModel) -> bool {
+    match det_model {
+        DetectionModel::V6Tiny => {
+            is_ppocrv6_language_alias(language) && !is_ppocrv6_japanese_alias(language)
+        }
+        DetectionModel::V6Small | DetectionModel::V6Medium => is_ppocrv6_language_alias(language),
+        DetectionModel::V5 | DetectionModel::V5Fp16 | DetectionModel::V4 => {
+            RecognitionModel::from_str(language).is_some()
+        }
+    }
+}
+
+pub fn unsupported_language_message(language: &str, det_model: DetectionModel) -> String {
+    match det_model {
+        DetectionModel::V6Tiny => format!(
+            "Language '{}' is not officially supported by {}. PP-OCRv6 tiny supports Chinese, English, and the official Latin-script language set, but not Japanese. Use v6-small/v6-medium for Japanese or v5 script-specific models for non-v6 scripts.",
+            language, det_model
+        ),
+        DetectionModel::V6Small | DetectionModel::V6Medium => format!(
+            "Language '{}' is not officially supported by {}. PP-OCRv6 small/medium support Chinese, Traditional Chinese, English, Japanese, and the official 46 Latin-script languages. Use v5 script-specific models for Korean, Cyrillic, Arabic, Devanagari, Thai, Greek, Tamil, or Telugu.",
+            language, det_model
+        ),
+        DetectionModel::V5 | DetectionModel::V5Fp16 | DetectionModel::V4 => {
+            format!("Unknown language/model: {}", language)
+        }
     }
 }
 
@@ -317,6 +612,15 @@ impl EmbeddedModels {
 
             #[cfg(feature = "embed-det-v4")]
             DetectionModel::V4 => Some(include_bytes!("../models/ch_PP-OCRv4_det_infer.mnn")),
+
+            #[cfg(feature = "embed-det-v6-tiny")]
+            DetectionModel::V6Tiny => Some(include_bytes!("../models/PP-OCRv6_tiny_det.mnn")),
+
+            #[cfg(feature = "embed-det-v6-small")]
+            DetectionModel::V6Small => Some(include_bytes!("../models/PP-OCRv6_small_det.mnn")),
+
+            #[cfg(feature = "embed-det-v6-medium")]
+            DetectionModel::V6Medium => Some(include_bytes!("../models/PP-OCRv6_medium_det.mnn")),
 
             #[allow(unreachable_patterns)]
             _ => None,
@@ -385,6 +689,15 @@ impl EmbeddedModels {
                 Some(include_bytes!("../models/te_PP-OCRv5_mobile_rec_infer.mnn"))
             }
 
+            #[cfg(feature = "embed-rec-v6-tiny")]
+            RecognitionModel::V6Tiny => Some(include_bytes!("../models/PP-OCRv6_tiny_rec.mnn")),
+
+            #[cfg(feature = "embed-rec-v6-small")]
+            RecognitionModel::V6Small => Some(include_bytes!("../models/PP-OCRv6_small_rec.mnn")),
+
+            #[cfg(feature = "embed-rec-v6-medium")]
+            RecognitionModel::V6Medium => Some(include_bytes!("../models/PP-OCRv6_medium_rec.mnn")),
+
             #[allow(unreachable_patterns)]
             _ => None,
         }
@@ -432,6 +745,17 @@ impl EmbeddedModels {
             #[cfg(feature = "embed-rec-telugu")]
             RecognitionModel::Telugu => Some(include_bytes!("../models/ppocr_keys_te.txt")),
 
+            #[cfg(feature = "embed-rec-v6-tiny")]
+            RecognitionModel::V6Tiny => Some(include_bytes!("../models/ppocr_keys_v6_tiny.txt")),
+
+            #[cfg(feature = "embed-rec-v6-small")]
+            RecognitionModel::V6Small => Some(include_bytes!("../models/ppocr_keys_v6_small.txt")),
+
+            #[cfg(feature = "embed-rec-v6-medium")]
+            RecognitionModel::V6Medium => {
+                Some(include_bytes!("../models/ppocr_keys_v6_medium.txt"))
+            }
+
             #[allow(unreachable_patterns)]
             _ => None,
         }
@@ -443,6 +767,9 @@ impl EmbeddedModels {
         cfg!(feature = "embed-det-v5")
             || cfg!(feature = "embed-det-v5-fp16")
             || cfg!(feature = "embed-det-v4")
+            || cfg!(feature = "embed-det-v6-tiny")
+            || cfg!(feature = "embed-det-v6-small")
+            || cfg!(feature = "embed-det-v6-medium")
     }
 
     /// 检查是否有内嵌的识别模型
@@ -460,6 +787,9 @@ impl EmbeddedModels {
             || cfg!(feature = "embed-rec-devanagari")
             || cfg!(feature = "embed-rec-tamil")
             || cfg!(feature = "embed-rec-telugu")
+            || cfg!(feature = "embed-rec-v6-tiny")
+            || cfg!(feature = "embed-rec-v6-small")
+            || cfg!(feature = "embed-rec-v6-medium")
     }
 
     /// 获取所有内嵌的识别模型
@@ -502,6 +832,15 @@ impl EmbeddedModels {
         #[cfg(feature = "embed-rec-telugu")]
         models.push(RecognitionModel::Telugu);
 
+        #[cfg(feature = "embed-rec-v6-tiny")]
+        models.push(RecognitionModel::V6Tiny);
+
+        #[cfg(feature = "embed-rec-v6-small")]
+        models.push(RecognitionModel::V6Small);
+
+        #[cfg(feature = "embed-rec-v6-medium")]
+        models.push(RecognitionModel::V6Medium);
+
         models
     }
 
@@ -517,6 +856,15 @@ impl EmbeddedModels {
 
         #[cfg(feature = "embed-det-v4")]
         models.push(DetectionModel::V4);
+
+        #[cfg(feature = "embed-det-v6-tiny")]
+        models.push(DetectionModel::V6Tiny);
+
+        #[cfg(feature = "embed-det-v6-small")]
+        models.push(DetectionModel::V6Small);
+
+        #[cfg(feature = "embed-det-v6-medium")]
+        models.push(DetectionModel::V6Medium);
 
         models
     }
@@ -668,6 +1016,9 @@ pub fn print_models_table() {
             DetectionModel::V5 => "PP-OCRv5 detection model",
             DetectionModel::V5Fp16 => "PP-OCRv5 FP16 detection model (faster)",
             DetectionModel::V4 => "PP-OCRv4 detection model",
+            DetectionModel::V6Tiny => "PP-OCRv6 tiny detection model (pairs with v6 tiny rec)",
+            DetectionModel::V6Small => "PP-OCRv6 small detection model (balanced)",
+            DetectionModel::V6Medium => "PP-OCRv6 medium detection model (accuracy first)",
         };
 
         println!(
@@ -680,4 +1031,102 @@ pub fn print_models_table() {
     }
 
     println!();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_ppocrv6_detection_tiers() {
+        assert_eq!(DetectionModel::from_str("v6"), Some(DetectionModel::V6Tiny));
+        assert_eq!(
+            DetectionModel::from_str("v6-small"),
+            Some(DetectionModel::V6Small)
+        );
+        assert_eq!(
+            DetectionModel::from_str("ppocr-v6-medium"),
+            Some(DetectionModel::V6Medium)
+        );
+    }
+
+    #[test]
+    fn ppocrv6_detection_tiers_select_matching_recognition_models() {
+        assert_eq!(
+            DetectionModel::V6Tiny.paired_recognition_model(),
+            Some(RecognitionModel::V6Tiny)
+        );
+        assert_eq!(
+            DetectionModel::V6Small.paired_recognition_model(),
+            Some(RecognitionModel::V6Small)
+        );
+        assert_eq!(
+            DetectionModel::V6Medium.paired_recognition_model(),
+            Some(RecognitionModel::V6Medium)
+        );
+        assert_eq!(DetectionModel::V5.paired_recognition_model(), None);
+    }
+
+    #[test]
+    fn parses_language_aliases_for_existing_official_groups() {
+        assert_eq!(
+            RecognitionModel::from_str("fr"),
+            Some(RecognitionModel::Latin)
+        );
+        assert_eq!(
+            RecognitionModel::from_str("japanese"),
+            Some(RecognitionModel::Chinese)
+        );
+        assert_eq!(
+            RecognitionModel::from_str("sr-cyrl"),
+            Some(RecognitionModel::Cyrillic)
+        );
+        assert_eq!(
+            RecognitionModel::from_str("hindi"),
+            Some(RecognitionModel::Devanagari)
+        );
+    }
+
+    #[test]
+    fn ppocrv6_recognition_models_use_unified_charset() {
+        assert_eq!(
+            RecognitionModel::V6Small.model_filename(),
+            "PP-OCRv6_small_rec.mnn"
+        );
+        assert_eq!(
+            RecognitionModel::V6Small.charset_filename(),
+            "ppocr_keys_v6_small.txt"
+        );
+        assert_eq!(
+            RecognitionModel::V6Medium.model_filename(),
+            "PP-OCRv6_medium_rec.mnn"
+        );
+        assert!(RecognitionModel::V6Medium
+            .supported_languages()
+            .contains(&"Japanese"));
+    }
+
+    #[test]
+    fn ppocrv6_language_validation_uses_official_language_set() {
+        assert!(is_language_supported_by_detection_model(
+            "fr",
+            DetectionModel::V6Small
+        ));
+        assert!(is_language_supported_by_detection_model(
+            "japanese",
+            DetectionModel::V6Medium
+        ));
+        assert!(!is_language_supported_by_detection_model(
+            "japanese",
+            DetectionModel::V6Tiny
+        ));
+        assert!(!is_language_supported_by_detection_model(
+            "ar",
+            DetectionModel::V6Small
+        ));
+        assert!(!is_language_supported_by_detection_model(
+            "hindi",
+            DetectionModel::V6Medium
+        ));
+    }
 }
