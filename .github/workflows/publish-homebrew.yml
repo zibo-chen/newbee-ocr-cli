@@ -34,9 +34,14 @@ jobs:
           HOMEBREW_NO_AUTO_UPDATE: "1"
         run: |
           set -euo pipefail
-          brew install --formula "$RUNNER_TEMP/formula/nbocr.rb"
+          brew tap-new test/nbocr
+          test_tap="$(brew --repository test/nbocr)"
+          install -m 0644 "$RUNNER_TEMP/formula/nbocr.rb" \
+            "$test_tap/Formula/nbocr.rb"
+          brew install test/nbocr/nbocr
           nbocr --version
           brew uninstall nbocr
+          brew untap test/nbocr
 
       - name: Configure scoped deploy key
         shell: bash
