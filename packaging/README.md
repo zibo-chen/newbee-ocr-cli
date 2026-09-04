@@ -12,7 +12,7 @@ private halves are stored in this repository as Actions secrets:
 - `HOMEBREW_TAP_DEPLOY_KEY`
 - `LINUX_PACKAGES_DEPLOY_KEY`
 
-Linux packages and repository metadata are signed by the key stored in
+RPM packages and APT/RPM repository metadata are signed by the key stored in
 `LINUX_SIGNING_KEY`. Its public fingerprint is:
 
 ```text

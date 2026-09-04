@@ -30,8 +30,6 @@ contents:
       mode: 0644
 rpm:
   compression: gzip:9
-  signature:
-    key_file: ${SIGNING_KEY_FILE}
 deb:
   compression: gzip:9
   fields:
