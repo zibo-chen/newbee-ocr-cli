@@ -2,6 +2,55 @@
 
 A command-line OCR tool built on [rust-paddle-ocr](https://github.com/zibo-chen/rust-paddle-ocr) / `ocr-rs` 2.3.1. The default binary embeds PP-OCRv6 tiny, so basic OCR works without a separate model download. PP-OCRv6 small, medium, and legacy/script-specific models are downloaded from GitHub on demand when local files are missing.
 
+## Install
+
+### Homebrew (macOS and Linux)
+
+```bash
+brew install zibo-chen/tap/nbocr
+```
+
+### WinGet (Windows)
+
+```powershell
+winget install --id ChenZibo.NewbeeOCRCLI --exact
+```
+
+### Debian and Ubuntu
+
+```bash
+sudo install -d -m 0755 /etc/apt/keyrings
+sudo curl -fsSL https://zibo-chen.github.io/nbocr-packages/keys/nbocr.asc \
+  -o /etc/apt/keyrings/nbocr.asc
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/nbocr.asc] https://zibo-chen.github.io/nbocr-packages/apt stable main" \
+  | sudo tee /etc/apt/sources.list.d/nbocr.list >/dev/null
+sudo apt update
+sudo apt install nbocr
+```
+
+### Fedora, RHEL, Rocky Linux, and compatible distributions
+
+```bash
+sudo curl -fsSL https://zibo-chen.github.io/nbocr-packages/nbocr.repo \
+  -o /etc/yum.repos.d/nbocr.repo
+sudo dnf install nbocr
+```
+
+### Installer scripts
+
+macOS and Linux:
+
+```bash
+curl --proto '=https' --tlsv1.2 -LsSf \
+  https://github.com/zibo-chen/newbee-ocr-cli/releases/latest/download/newbee_ocr_cli-installer.sh | sh
+```
+
+Windows PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -c "irm https://github.com/zibo-chen/newbee-ocr-cli/releases/latest/download/newbee_ocr_cli-installer.ps1 | iex"
+```
+
 ## Build
 
 ```bash

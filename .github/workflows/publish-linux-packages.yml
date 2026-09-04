@@ -1,0 +1,181 @@
+name: Publish Linux packages
+
+on:
+  workflow_call:
+    inputs:
+      plan:
+        required: true
+        type: string
+    secrets:
+      LINUX_PACKAGES_DEPLOY_KEY:
+        required: true
+      LINUX_SIGNING_KEY:
+        required: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-22.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PACKAGES_DEPLOY_KEY: ${{ secrets.LINUX_PACKAGES_DEPLOY_KEY }}
+      SIGNING_KEY: ${{ secrets.LINUX_SIGNING_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install packaging tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y apt-utils createrepo-c dpkg-dev gnupg rpm
+          go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.47.0
+
+      - name: Download and extract Linux archives
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/release" "$RUNNER_TEMP/stage"
+          gh release download "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern "newbee_ocr_cli-*-unknown-linux-gnu.tar.xz" \
+            --dir "$RUNNER_TEMP/release"
+          for archive in "$RUNNER_TEMP"/release/*.tar.xz; do
+            tar -xJf "$archive" -C "$RUNNER_TEMP/stage"
+          done
+
+      - name: Build signed DEB and RPM packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          package_version="${GITHUB_REF_NAME#v}"
+          signing_key_file="$RUNNER_TEMP/nbocr-signing-key.asc"
+          printf '%s\n' "$SIGNING_KEY" > "$signing_key_file"
+          chmod 0600 "$signing_key_file"
+          mkdir -p "$RUNNER_TEMP/packages"
+
+          build_package() {
+            local rust_target="$1"
+            local nfpm_arch="$2"
+            local binary="$RUNNER_TEMP/stage/newbee_ocr_cli-${rust_target}/nbocr"
+            test -x "$binary"
+            PACKAGE_VERSION="$package_version" \
+              PACKAGE_BINARY="$binary" \
+              NFPM_ARCH="$nfpm_arch" \
+              SIGNING_KEY_FILE="$signing_key_file" \
+              "$(go env GOPATH)/bin/nfpm" package \
+                --config packaging/nfpm.yaml \
+                --packager deb \
+                --target "$RUNNER_TEMP/packages/"
+            PACKAGE_VERSION="$package_version" \
+              PACKAGE_BINARY="$binary" \
+              NFPM_ARCH="$nfpm_arch" \
+              SIGNING_KEY_FILE="$signing_key_file" \
+              "$(go env GOPATH)/bin/nfpm" package \
+                --config packaging/nfpm.yaml \
+                --packager rpm \
+                --target "$RUNNER_TEMP/packages/"
+          }
+
+          build_package x86_64-unknown-linux-gnu amd64
+          build_package aarch64-unknown-linux-gnu arm64
+          dpkg-deb --info "$RUNNER_TEMP"/packages/*.deb >/dev/null
+          for package in "$RUNNER_TEMP"/packages/*.rpm; do
+            rpm -qpl "$package" >/dev/null
+          done
+
+      - name: Test packages on clean distributions
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "$RUNNER_TEMP/packages:/packages:ro" \
+            ubuntu:22.04 \
+            bash -ceu 'apt-get update >/dev/null; apt-get install -y /packages/*_amd64.deb >/dev/null; nbocr --version'
+          docker run --rm \
+            -v "$RUNNER_TEMP/packages:/packages:ro" \
+            rockylinux:9-minimal \
+            sh -ceu 'microdnf install -y /packages/*.x86_64.rpm >/dev/null; nbocr --version'
+
+      - name: Add packages to GitHub Release
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release upload "$GITHUB_REF_NAME" "$RUNNER_TEMP"/packages/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber
+
+      - name: Configure repository credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 0700 "$HOME/.ssh"
+          printf '%s\n' "$PACKAGES_DEPLOY_KEY" > "$RUNNER_TEMP/linux-packages-key"
+          chmod 0600 "$RUNNER_TEMP/linux-packages-key"
+          ssh-keyscan -p 443 -H ssh.github.com >> "$HOME/.ssh/known_hosts"
+          export GNUPGHOME="$RUNNER_TEMP/gnupg"
+          install -d -m 0700 "$GNUPGHOME"
+          printf '%s\n' "$SIGNING_KEY" | gpg --batch --import
+
+      - name: Update signed APT and RPM repositories
+        shell: bash
+        env:
+          GIT_SSH_COMMAND: ssh -i ${{ runner.temp }}/linux-packages-key -o IdentitiesOnly=yes
+          GNUPGHOME: ${{ runner.temp }}/gnupg
+        run: |
+          set -euo pipefail
+          repo="$RUNNER_TEMP/nbocr-packages"
+          git clone ssh://git@ssh.github.com:443/zibo-chen/nbocr-packages.git "$repo"
+
+          install -d "$repo/apt/pool/main/n/nbocr"
+          install -m 0644 "$RUNNER_TEMP"/packages/*_amd64.deb "$repo/apt/pool/main/n/nbocr/"
+          install -m 0644 "$RUNNER_TEMP"/packages/*_arm64.deb "$repo/apt/pool/main/n/nbocr/"
+
+          for arch in amd64 arm64; do
+            packages_dir="$repo/apt/dists/stable/main/binary-$arch"
+            install -d "$packages_dir"
+            (
+              cd "$repo/apt"
+              dpkg-scanpackages --arch "$arch" --multiversion pool /dev/null \
+                > "dists/stable/main/binary-$arch/Packages"
+              gzip -9cn "dists/stable/main/binary-$arch/Packages" \
+                > "dists/stable/main/binary-$arch/Packages.gz"
+            )
+          done
+
+          apt-ftparchive \
+            -o APT::FTPArchive::Release::Origin="Newbee OCR" \
+            -o APT::FTPArchive::Release::Label="Newbee OCR" \
+            -o APT::FTPArchive::Release::Suite="stable" \
+            -o APT::FTPArchive::Release::Codename="stable" \
+            -o APT::FTPArchive::Release::Architectures="amd64 arm64" \
+            -o APT::FTPArchive::Release::Components="main" \
+            release "$repo/apt/dists/stable" > "$repo/apt/dists/stable/Release"
+          gpg --batch --yes --armor --detach-sign \
+            --output "$repo/apt/dists/stable/Release.gpg" \
+            "$repo/apt/dists/stable/Release"
+          gpg --batch --yes --clearsign \
+            --output "$repo/apt/dists/stable/InRelease" \
+            "$repo/apt/dists/stable/Release"
+
+          install -d "$repo/rpm/x86_64" "$repo/rpm/aarch64"
+          install -m 0644 "$RUNNER_TEMP"/packages/*.x86_64.rpm "$repo/rpm/x86_64/"
+          install -m 0644 "$RUNNER_TEMP"/packages/*.aarch64.rpm "$repo/rpm/aarch64/"
+          for arch in x86_64 aarch64; do
+            createrepo_c --update "$repo/rpm/$arch"
+            gpg --batch --yes --armor --detach-sign \
+              --output "$repo/rpm/$arch/repodata/repomd.xml.asc" \
+              "$repo/rpm/$arch/repodata/repomd.xml"
+          done
+
+          cd "$repo"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apt rpm
+          if git diff --cached --quiet; then
+            echo "Package repositories are already current"
+            exit 0
+          fi
+          git commit -m "nbocr ${GITHUB_REF_NAME#v}"
+          git push origin HEAD:main
