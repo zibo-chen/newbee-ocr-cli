@@ -1,0 +1,38 @@
+# yaml-language-server: $schema=https://nfpm.goreleaser.com/schema.json
+name: nbocr
+arch: ${NFPM_ARCH}
+platform: linux
+version: ${PACKAGE_VERSION}
+version_schema: semver
+release: 1
+section: utils
+priority: optional
+maintainer: ChenZibo <qw.54@163.com>
+description: High-performance command-line OCR powered by PaddleOCR models
+vendor: ChenZibo
+homepage: https://github.com/zibo-chen/newbee-ocr-cli
+license: Apache-2.0
+depends:
+  - ca-certificates
+contents:
+  - src: ${PACKAGE_BINARY}
+    dst: /usr/bin/nbocr
+    expand: true
+    file_info:
+      mode: 0755
+  - src: README.md
+    dst: /usr/share/doc/nbocr/README.md
+    file_info:
+      mode: 0644
+  - src: LICENSE
+    dst: /usr/share/licenses/nbocr/LICENSE
+    file_info:
+      mode: 0644
+rpm:
+  compression: gzip:9
+  signature:
+    key_file: ${SIGNING_KEY_FILE}
+deb:
+  compression: gzip:9
+  fields:
+    Bugs: https://github.com/zibo-chen/newbee-ocr-cli/issues

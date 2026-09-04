@@ -1,6 +1,6 @@
 [package]
 name = "newbee_ocr_cli"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2021"
 description = "A powerful and easy-to-use CLI tool for OCR based on ocr-rs"
 authors = ["ChenZibo <qw.54@163.com>"]
@@ -66,6 +66,15 @@ ureq = { version = "2", features = ["native-tls", "proxy-from-env"] }
 [[bin]]
 name = "nbocr"
 path = "src/main.rs"
+
+[package.metadata.dist]
+formula = "nbocr"
+
+[package.metadata.wix]
+upgrade-guid = "C95EFE3A-1A02-46B3-9A9A-D3B190F5217C"
+path-guid = "E31BA789-62AF-4C08-AA6A-1B5DDF3C6312"
+license = false
+eula = false
 
 # The profile that 'dist' will build with
 [profile.dist]
