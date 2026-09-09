@@ -1,6 +1,6 @@
 # Newbee OCR CLI
 
-A command-line OCR tool built on [rust-paddle-ocr](https://github.com/zibo-chen/rust-paddle-ocr) / `ocr-rs` 2.3.1. The default binary embeds PP-OCRv6 tiny, so basic OCR works without a separate model download. PP-OCRv6 small, medium, and legacy/script-specific models are downloaded from GitHub on demand when local files are missing.
+A command-line OCR tool built on [ocr-rs](https://github.com/zibo-chen/ocr-rs) 2.3.1. The default binary embeds PP-OCRv6 tiny, so basic OCR works without a separate model download. PP-OCRv6 small, medium, and legacy/script-specific models are downloaded from GitHub on demand when local files are missing.
 
 ## Install
 
@@ -102,7 +102,7 @@ Korean, Cyrillic, Arabic, Devanagari, Thai, Greek, Tamil, and Telugu should use 
 The default v6 tiny files are embedded by default. Other missing files are downloaded from:
 
 ```text
-https://raw.githubusercontent.com/zibo-chen/rust-paddle-ocr/v2.3.1/models/
+https://raw.githubusercontent.com/zibo-chen/ocr-rs/v2.3.1/models/
 ```
 
 Download target:
@@ -114,7 +114,7 @@ Already-downloaded files are reused.
 To install converted Paddle models manually:
 
 ```bash
-python ../rust-paddle-ocr/script/convert_paddle_to_mnn.py \
+python ../ocr-rs/script/convert_paddle_to_mnn.py \
   --ocr-dir /path/to/paddle/inference/models \
   --install-dir ./models
 ```

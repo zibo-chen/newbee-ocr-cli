@@ -10,7 +10,7 @@ pub const MODEL_DOWNLOAD_TAG: &str = "v2.3.1";
 
 pub fn model_download_url(filename: &str) -> String {
     format!(
-        "https://raw.githubusercontent.com/zibo-chen/rust-paddle-ocr/{}/models/{}",
+        "https://raw.githubusercontent.com/zibo-chen/ocr-rs/{}/models/{}",
         MODEL_DOWNLOAD_TAG, filename
     )
 }
@@ -1133,7 +1133,7 @@ mod tests {
         assert_eq!(MODEL_DOWNLOAD_TAG, "v2.3.1");
         assert_eq!(
             model_download_url("PP-OCRv6_small_det.mnn"),
-            "https://raw.githubusercontent.com/zibo-chen/rust-paddle-ocr/v2.3.1/models/PP-OCRv6_small_det.mnn"
+            "https://raw.githubusercontent.com/zibo-chen/ocr-rs/v2.3.1/models/PP-OCRv6_small_det.mnn"
         );
     }
 

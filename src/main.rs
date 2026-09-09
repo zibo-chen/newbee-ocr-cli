@@ -1,6 +1,6 @@
 //! Newbee OCR CLI
 //!
-//! A powerful and easy-to-use command-line OCR tool based on rust-paddle-ocr.
+//! A powerful and easy-to-use command-line OCR tool based on ocr-rs.
 //!
 //! Features:
 //! - Single image OCR
